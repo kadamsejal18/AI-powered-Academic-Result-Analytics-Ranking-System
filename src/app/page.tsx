@@ -47,6 +47,7 @@ export default function Home() {
   // --- UI and Theme State ---
   const [activeTab, setActiveTab] = useState<string>('landing');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const [notifications, setNotifications] = useState<Array<{ id: string; text: string; time: string; read: boolean }>>([
     { id: '1', text: 'OCR extraction completed for Emily Watson.', time: '5m ago', read: false },
@@ -202,40 +203,89 @@ export default function Home() {
     }
   };
 
-  // --- OCR Progress Simulator ---
+  // --- OCR Progress Simulator & Python Backend Integration ---
   const ocrIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startOcrSimulation = () => {
+  const startOcrSimulation = async () => {
     if (!uploadFile) return;
     setUploadStep(1);
-    setUploadProgress(0);
-    setOcrLogs(['Establishing secure channel connection...', 'Uploading source document files...']);
+    setUploadProgress(10);
+    setOcrLogs(['Establishing secure channel connection...', 'Uploading source document to Python backend...']);
 
-    let progressVal = 0;
-    const interval = setInterval(() => {
-      progressVal += 10;
-      setUploadProgress(progressVal);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
 
-      // Phase changes based on progress
-      if (progressVal === 30) {
-        setUploadStep(2);
-        setOcrLogs(prev => [...prev, 'Upload completed. Initiating OCR Vision Engine...', 'Detecting document boundary matrices...', 'Analyzing cell grid lines...']);
-      } else if (progressVal === 60) {
-        setUploadStep(3);
-        setOcrLogs(prev => [...prev, 'Text blocks parsed. Triggering AI Structuring LLM...', 'Identifying entity nodes (Roll Number, Student Name)...', 'Extracting exam scoring tabular rows...', 'Performing cross-validation check sums...']);
-      } else if (progressVal === 100) {
-        setUploadStep(4);
-        clearInterval(interval);
-        setOcrLogs(prev => [...prev, 'AI Parsing successful. Entity mapping finished.', 'Result verified. Ready for database submission.']);
-        // Push notification
-        const newNotif = {
-          id: Date.now().toString(),
-          text: `OCR extracted result for ${ocrPreviewData.name}. Ready to confirm.`,
-          time: 'Just now',
-          read: false
-        };
-        setNotifications(prev => [newNotif, ...prev]);
+      // POST to Python FastAPI server running on localhost:8001
+      const response = await fetch('http://localhost:8001/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let errMsg = 'Upload failed';
+        try {
+          const errorData = await response.json();
+          errMsg = errorData.detail || errorData.error || errMsg;
+        } catch (parseErr) {
+          errMsg = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errMsg);
       }
-    }, 600);
+
+      const uploadResult = await response.json();
+      const fileUrl = uploadResult.fileUrl;
+
+      // Update upload step & progress, add the public URL in logs
+      setUploadStep(2);
+      setUploadProgress(40);
+      setOcrLogs(prev => [
+        ...prev,
+        `Upload completed successfully.`,
+        `Saved to Supabase Storage.`,
+        `Returned URL: ${fileUrl}`,
+        `Initiating OCR Vision Engine...`,
+        `Detecting document boundary matrices...`,
+        `Analyzing cell grid lines...`
+      ]);
+
+      // Simulate the remaining OCR/AI analysis steps
+      setTimeout(() => {
+        setUploadStep(3);
+        setUploadProgress(70);
+        setOcrLogs(prev => [
+          ...prev,
+          'Text blocks parsed. Triggering AI Structuring LLM...',
+          'Identifying entity nodes (Roll Number, Student Name)...',
+          'Extracting exam scoring tabular rows...',
+          'Performing cross-validation check sums...'
+        ]);
+
+        setTimeout(() => {
+          setUploadStep(4);
+          setUploadProgress(100);
+          setOcrLogs(prev => [
+            ...prev,
+            'AI Parsing successful. Entity mapping finished.',
+            'Result verified. Ready for database submission.'
+          ]);
+
+          const newNotif = {
+            id: Date.now().toString(),
+            text: `OCR extracted result for ${ocrPreviewData.name}. Ready to confirm.`,
+            time: 'Just now',
+            read: false
+          };
+          setNotifications(prev => [newNotif, ...prev]);
+        }, 1200);
+      }, 1200);
+
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      setUploadStep(0);
+      setUploadProgress(0);
+      setOcrLogs(prev => [...prev, `Error: ${error.message || 'Connection refused.'}`]);
+      alert(`PDF Upload failed: ${error.message || 'Ensure your Python FastAPI server is running on port 8000.'}`);
+    }
   };
 
   const handleConfirmOcrAdd = async () => {
@@ -507,7 +557,7 @@ export default function Home() {
                 Upload result PDFs or images and instantly generate rankings, subject-wise toppers, performance insights, and visual analytics using our advanced AI-powered OCR.
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 pt-4">
+              <div className="flex flex-wrap items-center hero-buttons-container gap-4 pt-4">
                 <button
                   onClick={() => {
                     setActiveTab('upload');
@@ -607,26 +657,26 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Floating Cards */}
-              <div className="absolute -bottom-6 -left-8 z-20 glass-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
-                <div className="p-2 rounded-lg bg-cyan-500/25 text-cyan-500">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">Topper Trend</p>
-                  <p className="text-sm font-extrabold dark:text-white text-slate-800">Aarav S. (+4.2%)</p>
-                </div>
-              </div>
-
-              <div className="absolute -top-6 -right-6 z-20 glass-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
-                <div className="p-2 rounded-lg bg-purple-500/25 text-purple-500">
-                  <Trophy className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">New Rank Recalculated</p>
-                  <p className="text-sm font-extrabold dark:text-white text-slate-800">Emily W. (Rank #2)</p>
-                </div>
-              </div>
+               {/* Floating Cards */}
+               <div className="absolute -bottom-6 -left-8 z-20 glass-card landing-floating-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
+                 <div className="p-2 rounded-lg bg-cyan-500/25 text-cyan-500">
+                   <TrendingUp className="w-5 h-5" />
+                 </div>
+                 <div>
+                   <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">Topper Trend</p>
+                   <p className="text-sm font-extrabold dark:text-white text-slate-800">Aarav S. (+4.2%)</p>
+                 </div>
+               </div>
+ 
+               <div className="absolute -top-6 -right-6 z-20 glass-card landing-floating-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
+                 <div className="p-2 rounded-lg bg-purple-500/25 text-purple-500">
+                   <Trophy className="w-5 h-5" />
+                 </div>
+                 <div>
+                   <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">New Rank Recalculated</p>
+                   <p className="text-sm font-extrabold dark:text-white text-slate-800">Emily W. (Rank #2)</p>
+                 </div>
+               </div>
             </div>
           </main>
 
@@ -726,8 +776,16 @@ export default function Home() {
       {activeTab !== 'landing' && (
         <div className="min-h-screen flex text-left">
           
+          {/* Backdrop overlay for mobile menu drawer */}
+          {mobileMenuOpen && (
+            <div 
+              className="sidebar-backdrop" 
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
+
           {/* Collapsible Sidebar Navigation */}
-          <aside className={`glass-panel border-r border-indigo-500/10 dark:border-white/5 transition-all duration-300 flex flex-col justify-between z-40 fixed md:relative h-screen ${sidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}>
+          <aside className={`sidebar-container glass-panel border-r border-indigo-500/10 dark:border-white/5 flex flex-col justify-between h-screen ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileMenuOpen ? 'open' : ''}`}>
             
             <div className="flex flex-col">
               {/* Sidebar Header */}
@@ -763,6 +821,7 @@ export default function Home() {
                       onClick={() => {
                         setActiveTab(item.id);
                         if (item.id !== 'rankings') setSelectedStudent(null);
+                        setMobileMenuOpen(false); // Auto close drawer on navigation
                       }}
                       className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
                         isActive 
@@ -787,7 +846,10 @@ export default function Home() {
             <div className="p-3 border-t border-indigo-500/10 dark:border-white/5 space-y-3">
               {/* Back to landing */}
               <button
-                onClick={() => setActiveTab('landing')}
+                onClick={() => {
+                  setActiveTab('landing');
+                  setMobileMenuOpen(false);
+                }}
                 className="w-full flex items-center gap-3.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-all"
               >
                 <X className="w-4 h-4" />
@@ -807,13 +869,20 @@ export default function Home() {
           </aside>
 
           {/* Main Content Workspace */}
-          <div className={`flex-1 flex flex-col h-screen overflow-y-auto transition-all ${sidebarCollapsed ? 'pl-[72px] md:pl-0' : 'pl-[260px] md:pl-0'}`}>
+          <div className="main-workspace">
             
             {/* Top Workspace Header */}
-            <header className="h-16 border-b border-indigo-500/10 dark:border-white/5 px-6 flex items-center justify-between glass-panel sticky top-0 z-30">
+            <header className="h-16 border-b border-indigo-500/10 dark:border-white/5 px-4 md:px-6 flex items-center justify-between glass-panel sticky top-0 z-30">
               
               {/* Breadcrumb / Title */}
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="mobile-hamburger-btn p-1.5 mr-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400"
+                  title="Open Navigation"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
                 <span className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500">
                   Consoles
                 </span>
@@ -998,7 +1067,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   </div>
 
                   {/* Overview Cards */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 dashboard-metrics-grid gap-4 md:gap-6">
                     {[
                       { title: 'Total Students', value: stats.total, sub: 'Grade 12 Cohort', icon: <UserCheck className="w-5 h-5 text-indigo-400" /> },
                       { title: 'Average Score', value: `${stats.avgPct}%`, sub: `Class baseline`, icon: <TrendingUp className="w-5 h-5 text-cyan-400" /> },
@@ -1457,7 +1526,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
 
                           <div className="space-y-2">
                             <label className="text-[10px] font-bold text-slate-400 block">Extracted Subject Scores (Out of 100)</label>
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid grid-cols-5 score-inputs-grid gap-2">
                               {(Object.entries(ocrPreviewData.scores) as [keyof SubjectScores, number][]).map(([subjKey, score]) => (
                                 <div key={subjKey} className="text-center">
                                   <label className="text-[8px] uppercase font-bold text-slate-500">{subjKey.slice(0, 4)}</label>
@@ -1585,8 +1654,8 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                                 Student Name
                               </button>
                             </th>
-                            <th className="py-4 px-6 text-center">Roll Number</th>
-                            <th className="py-4 px-6 text-center">Class</th>
+                            <th className="py-4 px-6 text-center hide-on-mobile">Roll Number</th>
+                            <th className="py-4 px-6 text-center hide-on-mobile">Class</th>
                             <th className="py-4 px-6 text-center">
                               <button
                                 onClick={() => {
@@ -1598,8 +1667,8 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                                 Percentage
                               </button>
                             </th>
-                            <th className="py-4 px-6 text-center">Grade</th>
-                            <th className="py-4 px-6 text-center">Status</th>
+                            <th className="py-4 px-6 text-center hide-on-xs">Grade</th>
+                            <th className="py-4 px-6 text-center hide-on-mobile">Status</th>
                             <th className="py-4 px-6 text-center">Actions</th>
                           </tr>
                         </thead>
@@ -1632,19 +1701,19 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                                 <td className="py-4 px-6 font-bold dark:text-white text-slate-800">
                                   {s.name}
                                 </td>
-                                <td className="py-4 px-6 text-center font-mono dark:text-slate-400 text-slate-500">
+                                <td className="py-4 px-6 text-center font-mono dark:text-slate-400 text-slate-500 hide-on-mobile">
                                   {s.rollNumber}
                                 </td>
-                                <td className="py-4 px-6 text-center dark:text-slate-400 text-slate-500">
+                                <td className="py-4 px-6 text-center dark:text-slate-400 text-slate-500 hide-on-mobile">
                                   {s.className}
                                 </td>
                                 <td className="py-4 px-6 text-center font-bold font-mono dark:text-indigo-400 text-indigo-600">
                                   {s.percentage}%
                                 </td>
-                                <td className="py-4 px-6 text-center font-bold font-mono">
+                                <td className="py-4 px-6 text-center font-bold font-mono hide-on-xs">
                                   {s.grade}
                                 </td>
-                                <td className="py-4 px-6 text-center">
+                                <td className="py-4 px-6 text-center hide-on-mobile">
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.status === 'Pass' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border border-red-500/20 text-red-500'}`}>
                                     {s.status}
                                   </span>

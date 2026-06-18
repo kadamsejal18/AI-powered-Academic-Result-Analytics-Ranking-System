@@ -280,3 +280,176 @@ body {
   opacity: 1;
   visibility: visible;
 }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN SYSTEM (MEDIA QUERIES)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Desktop-First Layout & Sidebar Custom Controls
+   -------------------------------------------------------------------------- */
+.sidebar-container {
+  position: relative;
+  width: 260px;
+  height: 100vh;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 40;
+}
+
+.sidebar-container.sidebar-collapsed {
+  width: 72px;
+}
+
+.main-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  padding-left: 0;
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+.mobile-hamburger-btn {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Tablet Breakpoint (max-width: 1024px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  /* Adjust statistics page grid padding and spacing */
+  .grid-bg {
+    background-size: 30px 30px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile/Tablet Breakpoint (max-width: 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Transform Sidebar into an Overlay Drawer */
+  .sidebar-container {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px !important;
+    transform: translateX(-100%);
+    z-index: 100 !important;
+    box-shadow: none;
+  }
+
+  .sidebar-container.open {
+    transform: translateX(0);
+    box-shadow: 0 0 35px 5px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* Main workspace gets full width, no shift */
+  .main-workspace {
+    padding-left: 0 !important;
+  }
+
+  /* Backdrop filter when sidebar is open */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 11, 19, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 90;
+    animation: fade-in 0.25s ease-out;
+  }
+
+  /* Mobile toggle button layout display */
+  .mobile-hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hide less essential columns in leaderboards */
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  /* Flex wrap adjustments for dashboard grid headers */
+  .dashboard-header-block {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  /* SVG radar chart and other SVGs scaling height constraint */
+  .chart-container svg {
+    max-height: 190px;
+  }
+
+  /* Timeline step grids stacking margin */
+  .timeline-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Extra Small Mobile Breakpoint (max-width: 480px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .hide-on-xs {
+    display: none !important;
+  }
+
+  /* Overwrite grid cols layout */
+  .dashboard-metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* AI OCR review card inputs responsiveness */
+  .score-inputs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  /* Floating badges on landing preview mockup hidden to avoid overflows */
+  .landing-floating-card {
+    display: none !important;
+  }
+
+  /* Landing hero CTA button wrapping styling */
+  .hero-buttons-container {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .hero-buttons-container button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Narrow Mobile Breakpoint (max-width: 640px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  /* OCR inputs wrapped in 3 columns */
+  .score-inputs-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
