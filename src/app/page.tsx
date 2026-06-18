@@ -47,6 +47,7 @@ export default function Home() {
   // --- UI and Theme State ---
   const [activeTab, setActiveTab] = useState<string>('landing');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const [notifications, setNotifications] = useState<Array<{ id: string; text: string; time: string; read: boolean }>>([
     { id: '1', text: 'OCR extraction completed for Emily Watson.', time: '5m ago', read: false },
@@ -202,40 +203,89 @@ export default function Home() {
     }
   };
 
-  // --- OCR Progress Simulator ---
+  // --- OCR Progress Simulator & Python Backend Integration ---
   const ocrIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startOcrSimulation = () => {
+  const startOcrSimulation = async () => {
     if (!uploadFile) return;
     setUploadStep(1);
-    setUploadProgress(0);
-    setOcrLogs(['Establishing secure channel connection...', 'Uploading source document files...']);
+    setUploadProgress(10);
+    setOcrLogs(['Establishing secure channel connection...', 'Uploading source document to Python backend...']);
 
-    let progressVal = 0;
-    const interval = setInterval(() => {
-      progressVal += 10;
-      setUploadProgress(progressVal);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
 
-      // Phase changes based on progress
-      if (progressVal === 30) {
-        setUploadStep(2);
-        setOcrLogs(prev => [...prev, 'Upload completed. Initiating OCR Vision Engine...', 'Detecting document boundary matrices...', 'Analyzing cell grid lines...']);
-      } else if (progressVal === 60) {
-        setUploadStep(3);
-        setOcrLogs(prev => [...prev, 'Text blocks parsed. Triggering AI Structuring LLM...', 'Identifying entity nodes (Roll Number, Student Name)...', 'Extracting exam scoring tabular rows...', 'Performing cross-validation check sums...']);
-      } else if (progressVal === 100) {
-        setUploadStep(4);
-        clearInterval(interval);
-        setOcrLogs(prev => [...prev, 'AI Parsing successful. Entity mapping finished.', 'Result verified. Ready for database submission.']);
-        // Push notification
-        const newNotif = {
-          id: Date.now().toString(),
-          text: `OCR extracted result for ${ocrPreviewData.name}. Ready to confirm.`,
-          time: 'Just now',
-          read: false
-        };
-        setNotifications(prev => [newNotif, ...prev]);
+      // POST to Python FastAPI server running on localhost:8001
+      const response = await fetch('http://localhost:8001/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let errMsg = 'Upload failed';
+        try {
+          const errorData = await response.json();
+          errMsg = errorData.detail || errorData.error || errMsg;
+        } catch (parseErr) {
+          errMsg = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errMsg);
       }
-    }, 600);
+
+      const uploadResult = await response.json();
+      const fileUrl = uploadResult.fileUrl;
+
+      // Update upload step & progress, add the public URL in logs
+      setUploadStep(2);
+      setUploadProgress(40);
+      setOcrLogs(prev => [
+        ...prev,
+        `Upload completed successfully.`,
+        `Saved to Supabase Storage.`,
+        `Returned URL: ${fileUrl}`,
+        `Initiating OCR Vision Engine...`,
+        `Detecting document boundary matrices...`,
+        `Analyzing cell grid lines...`
+      ]);
+
+      // Simulate the remaining OCR/AI analysis steps
+      setTimeout(() => {
+        setUploadStep(3);
+        setUploadProgress(70);
+        setOcrLogs(prev => [
+          ...prev,
+          'Text blocks parsed. Triggering AI Structuring LLM...',
+          'Identifying entity nodes (Roll Number, Student Name)...',
+          'Extracting exam scoring tabular rows...',
+          'Performing cross-validation check sums...'
+        ]);
+
+        setTimeout(() => {
+          setUploadStep(4);
+          setUploadProgress(100);
+          setOcrLogs(prev => [
+            ...prev,
+            'AI Parsing successful. Entity mapping finished.',
+            'Result verified. Ready for database submission.'
+          ]);
+
+          const newNotif = {
+            id: Date.now().toString(),
+            text: `OCR extracted result for ${ocrPreviewData.name}. Ready to confirm.`,
+            time: 'Just now',
+            read: false
+          };
+          setNotifications(prev => [newNotif, ...prev]);
+        }, 1200);
+      }, 1200);
+
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      setUploadStep(0);
+      setUploadProgress(0);
+      setOcrLogs(prev => [...prev, `Error: ${error.message || 'Connection refused.'}`]);
+      alert(`PDF Upload failed: ${error.message || 'Ensure your Python FastAPI server is running on port 8000.'}`);
+    }
   };
 
   const handleConfirmOcrAdd = async () => {
@@ -460,12 +510,12 @@ export default function Home() {
       {activeTab === 'landing' && (
         <div className="flex flex-col min-h-screen">
           {/* Landing Header */}
-          <header className="w-full border-b border-indigo-500/10 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between glass-panel sticky top-0 z-50">
+          <header className="w-full border-b border-indigo-500/10 dark:border-white/5 py-4 flex items-center justify-between glass-panel sticky top-0 z-50 landing-header">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 rounded-xl shadow-lg shadow-indigo-500/20">
                 <Sparkles className="w-6 h-6 text-white pulse-node" />
               </div>
-              <span className="font-bold text-xl md:text-2xl bg-gradient-to-r from-indigo-900 via-indigo-700 to-cyan-600 dark:from-white dark:via-indigo-200 dark:to-cyan-400 bg-clip-text text-transparent tracking-tight">
+              <span className="font-bold bg-gradient-to-r from-indigo-900 via-indigo-700 to-cyan-600 dark:from-white dark:via-indigo-200 dark:to-cyan-400 bg-clip-text text-transparent tracking-tight landing-logo-text">
                 ResultIntel.ai
               </span>
             </div>
@@ -490,24 +540,24 @@ export default function Home() {
           </header>
 
           {/* Hero Section */}
-          <main className="flex-1 max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20 grid md:grid-cols-12 gap-12 items-center">
-            <div className="md:col-span-7 space-y-6 text-left">
+          <main className="flex-1 max-w-7xl mx-auto gap-12 items-center landing-hero">
+            <div className="space-y-6 text-left landing-hero-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold tracking-wide uppercase">
                 <Sparkles className="w-3.5 h-3.5" /> Next-Gen AI Academics Analytics
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] dark:text-white text-slate-900">
+              <h1 className="font-extrabold dark:text-white text-slate-900 landing-hero-title">
                 Transform Academic Results into{" "}
                 <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-500 dark:from-blue-400 dark:via-indigo-300 dark:to-cyan-300 bg-clip-text text-transparent">
                   Actionable Intelligence
                 </span>
               </h1>
 
-              <p className="text-base md:text-lg dark:text-slate-400 text-slate-600 leading-relaxed max-w-xl">
+              <p className="dark:text-slate-400 text-slate-600 leading-relaxed max-w-xl landing-hero-desc">
                 Upload result PDFs or images and instantly generate rankings, subject-wise toppers, performance insights, and visual analytics using our advanced AI-powered OCR.
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 pt-4">
+              <div className="flex flex-wrap items-center hero-buttons-container gap-4 pt-4">
                 <button
                   onClick={() => {
                     setActiveTab('upload');
@@ -530,22 +580,22 @@ export default function Home() {
               {/* Floating micro stats */}
               <div className="grid grid-cols-3 gap-6 pt-8 border-t border-indigo-500/10 dark:border-white/5">
                 <div>
-                  <h4 className="text-2xl md:text-3xl font-bold dark:text-white text-slate-900">99.8%</h4>
+                  <h4 className="font-bold dark:text-white text-slate-900 micro-stat-number">99.8%</h4>
                   <p className="text-xs dark:text-slate-400 text-slate-500 font-medium mt-1">AI OCR Accuracy</p>
                 </div>
                 <div>
-                  <h4 className="text-2xl md:text-3xl font-bold dark:text-white text-slate-900">&lt; 3s</h4>
+                  <h4 className="font-bold dark:text-white text-slate-900 micro-stat-number">&lt; 3s</h4>
                   <p className="text-xs dark:text-slate-400 text-slate-500 font-medium mt-1">Extraction Speed</p>
                 </div>
                 <div>
-                  <h4 className="text-2xl md:text-3xl font-bold dark:text-white text-slate-900">12k+</h4>
+                  <h4 className="font-bold dark:text-white text-slate-900 micro-stat-number">12k+</h4>
                   <p className="text-xs dark:text-slate-400 text-slate-500 font-medium mt-1">Sheets Parsed</p>
                 </div>
               </div>
             </div>
 
             {/* Interactive Preview Mockup Card */}
-            <div className="md:col-span-5 relative w-full h-[380px] md:h-[450px]">
+            <div className="relative w-full landing-hero-right mockup-container">
               {/* Outer Glow */}
               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/30 to-cyan-500/20 blur-[60px] rounded-full z-0 pointer-events-none" />
 
@@ -607,33 +657,34 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Floating Cards */}
-              <div className="absolute -bottom-6 -left-8 z-20 glass-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
-                <div className="p-2 rounded-lg bg-cyan-500/25 text-cyan-500">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">Topper Trend</p>
-                  <p className="text-sm font-extrabold dark:text-white text-slate-800">Aarav S. (+4.2%)</p>
-                </div>
-              </div>
-
-              <div className="absolute -top-6 -right-6 z-20 glass-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
-                <div className="p-2 rounded-lg bg-purple-500/25 text-purple-500">
-                  <Trophy className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">New Rank Recalculated</p>
-                  <p className="text-sm font-extrabold dark:text-white text-slate-800">Emily W. (Rank #2)</p>
-                </div>
-              </div>
+               {/* Floating Cards */}
+               <div className="absolute -bottom-6 -left-8 z-20 glass-card landing-floating-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
+                 <div className="p-2 rounded-lg bg-cyan-500/25 text-cyan-500">
+                   <TrendingUp className="w-5 h-5" />
+                 </div>
+                 <div>
+                   <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">Topper Trend</p>
+                   <p className="text-sm font-extrabold dark:text-white text-slate-800">Aarav S. (+4.2%)</p>
+                 </div>
+               </div>
+ 
+               <div className="absolute -top-6 -right-6 z-20 glass-card landing-floating-card p-4 rounded-xl shadow-xl flex items-center gap-3.5 border border-white/10 max-w-[200px] text-left">
+                 <div className="p-2 rounded-lg bg-purple-500/25 text-purple-500">
+                   <Trophy className="w-5 h-5" />
+                 </div>
+                 <div>
+                   <p className="text-[10px] dark:text-slate-400 text-slate-500 uppercase font-bold">New Rank Recalculated</p>
+                   <p className="text-sm font-extrabold dark:text-white text-slate-800">Emily W. (Rank #2)</p>
+                 </div>
+               </div>
             </div>
           </main>
 
           {/* Features Section */}
-          <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full">
+          {/* Features Section */}
+          <section className="max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full features-section">
             <div className="text-center max-w-xl mx-auto space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight dark:text-white text-slate-900">
+              <h2 className="font-bold tracking-tight dark:text-white text-slate-900 features-title">
                 Core Engine Capabilities
               </h2>
               <p className="dark:text-slate-400 text-slate-600">
@@ -641,7 +692,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="features-grid">
               {[
                 {
                   title: 'OCR Extraction',
@@ -686,9 +737,9 @@ export default function Home() {
           </section>
 
           {/* How It Works Section */}
-          <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full text-center">
+          <section className="max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full text-center how-it-works-section">
             <div className="max-w-xl mx-auto space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight dark:text-white text-slate-900">
+              <h2 className="font-bold tracking-tight dark:text-white text-slate-900 how-it-works-title">
                 How It Works
               </h2>
               <p className="dark:text-slate-400 text-slate-600">
@@ -696,7 +747,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
+            <div className="relative timeline-grid">
               {[
                 { step: 'Step 1', title: 'Upload PDF/Image', desc: 'Drag your scan sheet, photo, or grading PDF onto our drop interface.' },
                 { step: 'Step 2', title: 'OCR Processing', desc: 'Our machine vision system identifies rows, tables, and numeric characters.' },
@@ -716,7 +767,7 @@ export default function Home() {
           </section>
 
           {/* Footer */}
-          <footer className="w-full border-t border-indigo-500/10 dark:border-white/5 py-8 text-center text-xs dark:text-slate-500 text-slate-500 glass-panel">
+          <footer className="w-full border-t border-indigo-500/10 dark:border-white/5 py-8 text-center text-xs dark:text-slate-500 text-slate-500 glass-panel landing-footer">
             <p>© 2026 ResultIntel.ai. Built with Next.js 16 & Tailwind CSS v4. All rights reserved.</p>
           </footer>
         </div>
@@ -726,8 +777,16 @@ export default function Home() {
       {activeTab !== 'landing' && (
         <div className="min-h-screen flex text-left">
           
+          {/* Backdrop overlay for mobile menu drawer */}
+          {mobileMenuOpen && (
+            <div 
+              className="sidebar-backdrop" 
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
+
           {/* Collapsible Sidebar Navigation */}
-          <aside className={`glass-panel border-r border-indigo-500/10 dark:border-white/5 transition-all duration-300 flex flex-col justify-between z-40 fixed md:relative h-screen ${sidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}>
+          <aside className={`sidebar-container glass-panel border-r border-indigo-500/10 dark:border-white/5 flex flex-col justify-between h-screen ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileMenuOpen ? 'open' : ''}`}>
             
             <div className="flex flex-col">
               {/* Sidebar Header */}
@@ -763,6 +822,7 @@ export default function Home() {
                       onClick={() => {
                         setActiveTab(item.id);
                         if (item.id !== 'rankings') setSelectedStudent(null);
+                        setMobileMenuOpen(false); // Auto close drawer on navigation
                       }}
                       className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
                         isActive 
@@ -787,7 +847,10 @@ export default function Home() {
             <div className="p-3 border-t border-indigo-500/10 dark:border-white/5 space-y-3">
               {/* Back to landing */}
               <button
-                onClick={() => setActiveTab('landing')}
+                onClick={() => {
+                  setActiveTab('landing');
+                  setMobileMenuOpen(false);
+                }}
                 className="w-full flex items-center gap-3.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-all"
               >
                 <X className="w-4 h-4" />
@@ -807,13 +870,20 @@ export default function Home() {
           </aside>
 
           {/* Main Content Workspace */}
-          <div className={`flex-1 flex flex-col h-screen overflow-y-auto transition-all ${sidebarCollapsed ? 'pl-[72px] md:pl-0' : 'pl-[260px] md:pl-0'}`}>
+          <div className="main-workspace">
             
             {/* Top Workspace Header */}
-            <header className="h-16 border-b border-indigo-500/10 dark:border-white/5 px-6 flex items-center justify-between glass-panel sticky top-0 z-30">
+            <header className="h-16 border-b border-indigo-500/10 dark:border-white/5 flex items-center justify-between glass-panel sticky top-0 z-30 workspace-header">
               
               {/* Breadcrumb / Title */}
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="mobile-hamburger-btn p-1.5 mr-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400"
+                  title="Open Navigation"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
                 <span className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500">
                   Consoles
                 </span>
@@ -829,7 +899,7 @@ export default function Home() {
                 {/* Reset Data Button */}
                 <button
                   onClick={handleResetData}
-                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 dark:bg-red-950/10 hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
+                  className="items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 dark:bg-red-950/10 hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all reset-db-btn"
                   title="Reset to original 12 student scores"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Reset Database
@@ -884,7 +954,7 @@ export default function Home() {
             </header>
 
             {/* Workspace Body */}
-            <main className="p-6 md:p-8 flex-1 space-y-8 max-w-7xl w-full mx-auto">
+            <main className="flex-1 space-y-8 max-w-7xl w-full mx-auto workspace-body">
 
               {/* Database Error alert block */}
               {dbError && (
@@ -983,9 +1053,9 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                 <div className="space-y-8 animate-fade-in">
                   
                   {/* Dashboard Hero Greeting */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="justify-between dashboard-greeting-row">
                     <div>
-                      <h2 className="text-2xl md:text-3xl font-extrabold dark:text-white text-slate-900 tracking-tight">Academic Analytics Console</h2>
+                      <h2 className="font-extrabold dark:text-white text-slate-900 tracking-tight dashboard-greeting-title">Academic Analytics Console</h2>
                       <p className="text-sm dark:text-slate-400 text-slate-500 mt-1">AI-extracted database parsing models. Last updated 2 minutes ago.</p>
                     </div>
                     
@@ -998,7 +1068,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   </div>
 
                   {/* Overview Cards */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                  <div className="dashboard-metrics-grid">
                     {[
                       { title: 'Total Students', value: stats.total, sub: 'Grade 12 Cohort', icon: <UserCheck className="w-5 h-5 text-indigo-400" /> },
                       { title: 'Average Score', value: `${stats.avgPct}%`, sub: `Class baseline`, icon: <TrendingUp className="w-5 h-5 text-cyan-400" /> },
@@ -1019,10 +1089,10 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   </div>
 
                   {/* Analytics Section - Custom SVG Charts */}
-                  <div className="grid lg:grid-cols-12 gap-6 md:gap-8">
+                  <div className="analytics-row-grid">
                     
                     {/* Student Performance Chart (Line Chart) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-8 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-wide">
                       <div className="flex justify-between items-center border-b border-indigo-500/5 pb-4 mb-4">
                         <div>
                           <h3 className="font-bold dark:text-white text-slate-800 text-base">Student Score Distribution</h3>
@@ -1113,7 +1183,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Grade Distribution Chart (Donut progress lists) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-4 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-narrow">
                       <div className="border-b border-indigo-500/5 pb-4 mb-4">
                         <h3 className="font-bold dark:text-white text-slate-800 text-base">Grade Distribution</h3>
                         <p className="text-xs dark:text-slate-500 text-slate-500 mt-0.5">Cohort distribution grouped by grades</p>
@@ -1151,7 +1221,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Subject Comparison Chart (Bar Chart) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-6 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-half">
                       <div className="border-b border-indigo-500/5 pb-4 mb-4">
                         <h3 className="font-bold dark:text-white text-slate-800 text-base">Subject Performance Benchmarks</h3>
                         <p className="text-xs dark:text-slate-500 text-slate-500 mt-0.5">Average scores vs subject toppers</p>
@@ -1217,7 +1287,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Performance Heatmap (Subject vs Students) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-6 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-half">
                       <div className="border-b border-indigo-500/5 pb-4 mb-4">
                         <h3 className="font-bold dark:text-white text-slate-800 text-base">Performance Heatmap</h3>
                         <p className="text-xs dark:text-slate-500 text-slate-500 mt-0.5">Cell grid mapping scores per subject (Ranks 1-6)</p>
@@ -1277,7 +1347,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                       <h3 className="font-extrabold text-lg dark:text-white text-slate-800 tracking-tight">AI intelligence Recommendations</h3>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="ai-recommendations-grid">
                       <div className="p-4 rounded-xl dark:bg-white/5 bg-slate-100 border border-indigo-500/5 space-y-2">
                         <div className="flex justify-between items-center text-xs font-bold text-red-500">
                           <span>Attention Flag</span>
@@ -1423,7 +1493,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                             <h4 className="font-bold text-sm uppercase tracking-wider">Review AI Parsed Entity</h4>
                           </div>
 
-                          <div className="grid md:grid-cols-3 gap-4">
+                          <div className="ocr-inputs-meta-grid">
                             <div>
                               <label className="text-[10px] font-bold text-slate-400 block mb-1">Student Name</label>
                               <input
@@ -1457,7 +1527,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
 
                           <div className="space-y-2">
                             <label className="text-[10px] font-bold text-slate-400 block">Extracted Subject Scores (Out of 100)</label>
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid grid-cols-5 score-inputs-grid gap-2">
                               {(Object.entries(ocrPreviewData.scores) as [keyof SubjectScores, number][]).map(([subjKey, score]) => (
                                 <div key={subjKey} className="text-center">
                                   <label className="text-[8px] uppercase font-bold text-slate-500">{subjKey.slice(0, 4)}</label>
@@ -1522,7 +1592,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                 <div className="space-y-6 animate-fade-in">
                   
                   {/* Rankings Header Controls */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="justify-between gap-4 rankings-header-row">
                     <div>
                       <h2 className="text-2xl font-extrabold dark:text-white text-slate-900 tracking-tight">Student Leaderboards</h2>
                       <p className="text-xs dark:text-slate-400 text-slate-500">Complete listing of students ranked by overall percentage performance.</p>
@@ -1585,8 +1655,8 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                                 Student Name
                               </button>
                             </th>
-                            <th className="py-4 px-6 text-center">Roll Number</th>
-                            <th className="py-4 px-6 text-center">Class</th>
+                            <th className="py-4 px-6 text-center hide-on-mobile">Roll Number</th>
+                            <th className="py-4 px-6 text-center hide-on-mobile">Class</th>
                             <th className="py-4 px-6 text-center">
                               <button
                                 onClick={() => {
@@ -1598,8 +1668,8 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                                 Percentage
                               </button>
                             </th>
-                            <th className="py-4 px-6 text-center">Grade</th>
-                            <th className="py-4 px-6 text-center">Status</th>
+                            <th className="py-4 px-6 text-center hide-on-xs">Grade</th>
+                            <th className="py-4 px-6 text-center hide-on-mobile">Status</th>
                             <th className="py-4 px-6 text-center">Actions</th>
                           </tr>
                         </thead>
@@ -1632,19 +1702,19 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                                 <td className="py-4 px-6 font-bold dark:text-white text-slate-800">
                                   {s.name}
                                 </td>
-                                <td className="py-4 px-6 text-center font-mono dark:text-slate-400 text-slate-500">
+                                <td className="py-4 px-6 text-center font-mono dark:text-slate-400 text-slate-500 hide-on-mobile">
                                   {s.rollNumber}
                                 </td>
-                                <td className="py-4 px-6 text-center dark:text-slate-400 text-slate-500">
+                                <td className="py-4 px-6 text-center dark:text-slate-400 text-slate-500 hide-on-mobile">
                                   {s.className}
                                 </td>
                                 <td className="py-4 px-6 text-center font-bold font-mono dark:text-indigo-400 text-indigo-600">
                                   {s.percentage}%
                                 </td>
-                                <td className="py-4 px-6 text-center font-bold font-mono">
+                                <td className="py-4 px-6 text-center font-bold font-mono hide-on-xs">
                                   {s.grade}
                                 </td>
-                                <td className="py-4 px-6 text-center">
+                                <td className="py-4 px-6 text-center hide-on-mobile">
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.status === 'Pass' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border border-red-500/20 text-red-500'}`}>
                                     {s.status}
                                   </span>
@@ -1701,10 +1771,10 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   </div>
 
                   {/* Profile Layout */}
-                  <div className="grid lg:grid-cols-12 gap-8">
+                  <div className="student-detail-grid">
                     
                     {/* Left profile detail card */}
-                    <div className="lg:col-span-4 space-y-6">
+                    <div className="space-y-6 student-sidebar-col">
                       
                       {/* Avatar Card */}
                       <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 text-center flex flex-col items-center">
@@ -1751,7 +1821,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Right subject details and SVG Radar chart */}
-                    <div className="lg:col-span-8 space-y-6">
+                    <div className="space-y-6 student-main-col">
                       
                       {/* Detailed Score Table */}
                       <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 space-y-4">
@@ -1790,7 +1860,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                       </div>
 
                       {/* SVG Radar strengths polygon visualization */}
-                      <div className="grid md:grid-cols-2 gap-6">
+                      <div className="student-charts-row">
                         
                         {/* Radar Chart */}
                         <div className="glass-card p-5 rounded-2xl border border-indigo-500/5 flex flex-col items-center justify-between">
@@ -1902,7 +1972,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                 <div className="space-y-8 animate-fade-in text-left">
                   
                   {/* Selector Header */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-500/10 pb-4">
+                  <div className="border-b border-indigo-500/10 pb-4 subject-analytics-header-row">
                     <div>
                       <h2 className="text-2xl font-extrabold dark:text-white text-slate-900 tracking-tight">Subject Analytics Console</h2>
                       <p className="text-xs dark:text-slate-400 text-slate-500">Explore granular academic indicators on a subject-by-subject basis.</p>
@@ -1947,7 +2017,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                       <div className="space-y-6">
                         
                         {/* Statistics row */}
-                        <div className="grid md:grid-cols-4 gap-6">
+                        <div className="subject-stats-grid">
                           <div className="glass-card p-5 rounded-2xl border border-white/5">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Class Average</span>
                             <span className="text-3xl font-black text-indigo-500 mt-2 block">{data.avg}%</span>
@@ -2026,7 +2096,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     <p className="text-xs dark:text-slate-400 text-slate-500 mt-1">Export, generate, or schedule compilation logs for cohorts and divisions.</p>
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-6">
+                  <div className="reports-grid">
                     {[
                       { title: 'Cumulative Rankings Log', format: 'PDF Document (A4)', desc: 'Consolidated listing of students sorted by final overall marks. Includes metadata signatures.', icon: <Trophy className="w-5 h-5 text-indigo-400" /> },
                       { title: 'Subject Performance Matrix', format: 'Excel spreadsheet', desc: 'Cell matrix of individual marks, subject-wise pass margins, standard deviations, and class scores.', icon: <FileText className="w-5 h-5 text-cyan-400" /> },
@@ -2078,7 +2148,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   <div className="glass-panel p-6 rounded-2xl border border-white/5 space-y-6">
                     <div className="space-y-4">
                       <h4 className="font-bold text-sm dark:text-white text-slate-800 border-b border-white/5 pb-2">AI OCR Engine</h4>
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="settings-row-2col">
                         <div>
                           <label className="text-[10px] font-bold text-slate-400 block mb-1">OCR Model Core</label>
                           <select className="w-full text-xs font-bold dark:bg-white/5 bg-white border border-slate-300 dark:border-white/10 p-2 rounded-lg dark:text-white text-slate-700">
@@ -2100,7 +2170,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
 
                     <div className="space-y-4">
                       <h4 className="font-bold text-sm dark:text-white text-slate-800 border-b border-white/5 pb-2">Cohort Margins</h4>
-                      <div className="grid md:grid-cols-3 gap-4">
+                      <div className="settings-row-3col">
                         <div>
                           <label className="text-[10px] font-bold text-slate-400 block mb-1">Pass Score Threshold</label>
                           <input type="number" defaultValue="40" className="w-full text-xs font-bold dark:bg-white/5 bg-white border border-slate-300 dark:border-white/10 p-2 rounded-lg dark:text-white text-slate-700 text-center" />

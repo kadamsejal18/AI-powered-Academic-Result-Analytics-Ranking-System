@@ -280,3 +280,459 @@ body {
   opacity: 1;
   visibility: visible;
 }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN SYSTEM (CSS MEDIA QUERIES)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Desktop-First Core Classes (Default sizes >= 1025px unless overridden)
+   -------------------------------------------------------------------------- */
+.sidebar-container {
+  position: relative;
+  width: 260px;
+  height: 100vh;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 40;
+}
+
+.sidebar-container.sidebar-collapsed {
+  width: 72px;
+}
+
+.main-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  padding-left: 0;
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+.mobile-hamburger-btn {
+  display: none;
+}
+
+/* Landing Page Elements */
+.landing-header {
+  padding-left: 3rem;
+  padding-right: 3rem;
+  transition: padding 0.3s ease;
+}
+
+.landing-logo-text {
+  font-size: 1.5rem;
+  transition: font-size 0.3s ease;
+}
+
+.landing-hero {
+  padding: 5rem 3rem;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  transition: all 0.3s ease;
+}
+
+.landing-hero-left {
+  grid-column: span 7 / span 7;
+}
+
+.landing-hero-right {
+  grid-column: span 5 / span 5;
+}
+
+.landing-hero-title {
+  font-size: 3.75rem;
+  line-height: 1.15;
+  transition: font-size 0.3s ease;
+}
+
+.landing-hero-desc {
+  font-size: 1.125rem;
+  transition: font-size 0.3s ease;
+}
+
+.mockup-container {
+  height: 450px;
+  transition: height 0.3s ease;
+}
+
+.micro-stat-number {
+  font-size: 1.875rem;
+}
+
+.features-section, .how-it-works-section {
+  padding: 5rem 3rem;
+}
+
+.features-title, .how-it-works-title {
+  font-size: 2.25rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+}
+
+.timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2rem;
+}
+
+.landing-footer {
+  padding: 2rem 3rem;
+}
+
+/* Workspace Panels */
+.workspace-header {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.workspace-body {
+  padding: 2rem;
+}
+
+.reset-db-btn {
+  display: flex;
+}
+
+/* Dashboard Console */
+.dashboard-greeting-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dashboard-greeting-title {
+  font-size: 1.875rem;
+}
+
+.dashboard-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.analytics-row-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 2rem;
+}
+
+.analytics-card-wide {
+  grid-column: span 8 / span 8;
+}
+
+.analytics-card-narrow {
+  grid-column: span 4 / span 4;
+}
+
+.analytics-card-half {
+  grid-column: span 6 / span 6;
+}
+
+.ai-recommendations-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+/* Upload Results View */
+.ocr-inputs-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.score-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+/* Rankings & Student Profile details */
+.rankings-header-row, .subject-analytics-header-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.student-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 2rem;
+}
+
+.student-sidebar-col {
+  grid-column: span 4 / span 4;
+}
+
+.student-main-col {
+  grid-column: span 8 / span 8;
+}
+
+.student-charts-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+/* Subject Analytics, Reports, Settings */
+.subject-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.settings-row-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.settings-row-3col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Medium/Laptop Breakpoint (max-width: 1024px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .grid-bg {
+    background-size: 30px 30px;
+  }
+  .landing-hero-title {
+    font-size: 3rem;
+  }
+  .analytics-row-grid {
+    gap: 1.5rem;
+  }
+  .student-detail-grid {
+    gap: 1.5rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile/Tablet Breakpoint (max-width: 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Sidebar Drawer styling overrides */
+  .sidebar-container {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px !important;
+    transform: translateX(-100%);
+    z-index: 100 !important;
+    box-shadow: none;
+  }
+  .sidebar-container.open {
+    transform: translateX(0);
+    box-shadow: 0 0 35px 5px rgba(0, 0, 0, 0.3) !important;
+  }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 11, 19, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 90;
+    animation: fade-in 0.25s ease-out;
+  }
+  .mobile-hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Landing page overrides */
+  .landing-header {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+  .landing-logo-text {
+    font-size: 1.25rem !important;
+  }
+  .landing-hero {
+    padding: 3rem 1.5rem !important;
+    grid-template-columns: 1fr !important;
+    gap: 3rem !important;
+  }
+  .landing-hero-left, .landing-hero-right {
+    grid-column: span 12 / span 12 !important;
+  }
+  .landing-hero-title {
+    font-size: 2.25rem !important;
+  }
+  .landing-hero-desc {
+    font-size: 1rem !important;
+  }
+  .mockup-container {
+    height: 380px !important;
+  }
+  .features-section, .how-it-works-section {
+    padding: 3.5rem 1.5rem !important;
+  }
+  .features-title, .how-it-works-title {
+    font-size: 1.875rem !important;
+  }
+  .features-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+  .timeline-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+  .landing-footer {
+    padding: 2rem 1.5rem !important;
+  }
+
+  /* Workspace overrides */
+  .workspace-header {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .workspace-body {
+    padding: 1.5rem !important;
+  }
+  .reset-db-btn {
+    display: none !important;
+  }
+
+  /* Dashboard Console overrides */
+  .dashboard-greeting-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+  .dashboard-greeting-title {
+    font-size: 1.5rem !important;
+  }
+  .dashboard-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+  .analytics-row-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+  .analytics-card-wide, .analytics-card-narrow, .analytics-card-half {
+    grid-column: span 12 / span 12 !important;
+  }
+  .ai-recommendations-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Rankings & Student Profile Detail overrides */
+  .rankings-header-row, .subject-analytics-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .student-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+  .student-sidebar-col, .student-main-col {
+    grid-column: span 12 / span 12 !important;
+  }
+  .student-charts-row {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  /* Upload & Forms overrides */
+  .ocr-inputs-meta-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  .score-inputs-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Subject Analytics, Reports, Settings overrides */
+  .subject-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+  .reports-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  .settings-row-2col, .settings-row-3col {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* SVG radar chart height constraints on small screens */
+  .chart-container svg {
+    max-height: 190px !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Extra Small Mobile Breakpoint (max-width: 480px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .hide-on-xs {
+    display: none !important;
+  }
+  .dashboard-metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .score-inputs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+  .landing-floating-card {
+    display: none !important;
+  }
+  .hero-buttons-container {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .hero-buttons-container button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .subject-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Keyframe Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

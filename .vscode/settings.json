@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "/home/sejal/projects/.venv/bin/python",
+  "python.pythonPath": "/home/sejal/projects/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "/home/sejal/projects/backend",
+    "/home/sejal/projects/.venv/lib/python3.12/site-packages"
+  ]
+}
