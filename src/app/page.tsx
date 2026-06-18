@@ -38,8 +38,10 @@ import {
   SubjectScores,
   SUBJECT_NAMES,
   addStudentAndReRank,
-  calculateGrade
+  calculateGrade,
+  sortAndRankStudents
 } from '../utils/studentData';
+import { supabase } from '../lib/supabase';
 
 export default function Home() {
   // --- UI and Theme State ---
@@ -56,6 +58,8 @@ export default function Home() {
   // --- Core Application State ---
   const [studentsList, setStudentsList] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   // --- Upload State ---
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -83,19 +87,51 @@ export default function Home() {
   // --- Subject Analytics State ---
   const [subjectSelected, setSubjectSelected] = useState<keyof SubjectScores>('mathematics');
 
+  // --- Fetch students from Supabase ---
+  const fetchStudents = async () => {
+    setLoading(true);
+    setDbError(null);
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*');
+
+      if (error) {
+        setDbError(error.message);
+        console.error("Error fetching students:", error);
+      } else {
+        const mapped: Omit<Student, 'rank'>[] = (data || []).map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          rollNumber: row.roll_number,
+          className: row.class_name,
+          scores: row.scores,
+          totalObtained: row.total_obtained,
+          maxTotal: row.max_total || 500,
+          percentage: row.percentage,
+          grade: row.grade,
+          status: row.status,
+          aiInsights: {
+            strongestSubject: row.ai_insights?.strongestSubject || 'Unknown',
+            weakestSubject: row.ai_insights?.weakestSubject || 'Unknown',
+            improvementSuggestion: row.ai_insights?.improvementSuggestion || 'None',
+            trend: row.ai_insights?.trend || 'stable'
+          }
+        }));
+
+        const ranked = sortAndRankStudents(mapped);
+        setStudentsList(ranked);
+      }
+    } catch (e: any) {
+      setDbError(e.message || "An unexpected error occurred connecting to database.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- Setup initial dataset ---
   useEffect(() => {
-    const saved = localStorage.getItem('result_intel_students');
-    if (saved) {
-      try {
-        setStudentsList(JSON.parse(saved));
-      } catch (e) {
-        setStudentsList(INITIAL_STUDENTS);
-      }
-    } else {
-      setStudentsList(INITIAL_STUDENTS);
-      localStorage.setItem('result_intel_students', JSON.stringify(INITIAL_STUDENTS));
-    }
+    fetchStudents();
   }, []);
 
   // Sync theme to root element
@@ -107,19 +143,62 @@ export default function Home() {
     }
   }, [darkMode]);
 
-  // Helper: Reset dataset
-  const handleResetData = () => {
-    if (confirm('Are you sure you want to reset the database to original mock records?')) {
-      setStudentsList(INITIAL_STUDENTS);
-      localStorage.setItem('result_intel_students', JSON.stringify(INITIAL_STUDENTS));
-      // Notify
-      const newNotif = {
-        id: Date.now().toString(),
-        text: 'Database reset to original 12 student records.',
-        time: 'Just now',
-        read: false
-      };
-      setNotifications(prev => [newNotif, ...prev]);
+  // Helper: Seed/Reset database in Supabase
+  const handleResetData = async () => {
+    if (confirm('Are you sure you want to seed/reset the database to the 12 original mock records? This will delete all current database records.')) {
+      setLoading(true);
+      try {
+        // Delete all current records
+        const { error: deleteError } = await supabase
+          .from('students')
+          .delete()
+          .neq('id', '_invalid_placeholder_id_');
+
+        if (deleteError) {
+          alert(`Supabase Delete Error: ${deleteError.message}`);
+          console.error(deleteError);
+          return;
+        }
+
+        // Prep insert rows
+        const dbRows = INITIAL_STUDENTS.map(s => ({
+          id: s.id,
+          name: s.name,
+          roll_number: s.rollNumber,
+          class_name: s.className,
+          scores: s.scores,
+          total_obtained: s.totalObtained,
+          max_total: s.maxTotal,
+          percentage: s.percentage,
+          grade: s.grade,
+          status: s.status,
+          ai_insights: s.aiInsights
+        }));
+
+        // Insert mock records
+        const { error: insertError } = await supabase
+          .from('students')
+          .insert(dbRows);
+
+        if (insertError) {
+          alert(`Supabase Seed Error: ${insertError.message}. Make sure you ran the SQL schema in your Supabase editor!`);
+          console.error(insertError);
+        } else {
+          await fetchStudents();
+          // Notify
+          const newNotif = {
+            id: Date.now().toString(),
+            text: 'Database successfully seeded with 12 mock student records.',
+            time: 'Just now',
+            read: false
+          };
+          setNotifications(prev => [newNotif, ...prev]);
+        }
+      } catch (e: any) {
+        alert(`Reset failed: ${e.message}`);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -159,20 +238,123 @@ export default function Home() {
     }, 600);
   };
 
-  const handleConfirmOcrAdd = () => {
-    // Add student to list
-    const updated = addStudentAndReRank(studentsList, ocrPreviewData);
-    setStudentsList(updated);
-    localStorage.setItem('result_intel_students', JSON.stringify(updated));
+  const handleConfirmOcrAdd = async () => {
+    setLoading(true);
+    
+    const totalObtained = 
+      ocrPreviewData.scores.mathematics +
+      ocrPreviewData.scores.physics +
+      ocrPreviewData.scores.chemistry +
+      ocrPreviewData.scores.english +
+      ocrPreviewData.scores.computerScience;
+    
+    const maxTotal = 500;
+    const percentage = parseFloat(((totalObtained / maxTotal) * 100).toFixed(1));
+    const grade = calculateGrade(percentage);
+    const hasFailed = Object.values(ocrPreviewData.scores).some(score => score < 40);
+    const status = hasFailed ? 'Fail' : 'Pass';
 
-    // Reset upload state
-    setUploadFile(null);
-    setUploadStep(0);
-    setUploadProgress(0);
-    setOcrLogs([]);
+    // Compute AI insights dynamically
+    const entries = Object.entries(ocrPreviewData.scores) as [keyof SubjectScores, number][];
+    const sortedScores = [...entries].sort((a, b) => b[1] - a[1]);
+    const strongest = SUBJECT_NAMES[sortedScores[0][0]];
+    const weakest = SUBJECT_NAMES[sortedScores[sortedScores.length - 1][0]];
+    
+    let suggestion = '';
+    if (percentage >= 90) {
+      suggestion = `Outstanding potential shown in ${strongest}. Recommended for advanced studies or mentoring peers.`;
+    } else if (percentage >= 75) {
+      suggestion = `Solid foundation. Focus on bridging the gap in ${weakest} to enter the elite score bracket.`;
+    } else if (percentage >= 55) {
+      suggestion = `Moderate performance. Increase weekly revision hours in ${weakest} and practice past examination papers.`;
+    } else {
+      suggestion = `Needs immediate support. Enlist ${ocrPreviewData.name} in remedial classes for ${weakest} and monitor weekly logs.`;
+    }
 
-    // Redirect to rankings
-    setActiveTab('rankings');
+    const aiInsights = {
+      strongestSubject: strongest,
+      weakestSubject: weakest,
+      improvementSuggestion: suggestion,
+      trend: percentage >= 80 ? 'improving' : 'stable',
+    };
+
+    const newStudentId = 's' + (studentsList.length + 1) + '_' + Date.now();
+
+    const dbRow = {
+      id: newStudentId,
+      name: ocrPreviewData.name,
+      roll_number: ocrPreviewData.rollNumber,
+      class_name: ocrPreviewData.className,
+      scores: ocrPreviewData.scores,
+      total_obtained: totalObtained,
+      max_total: maxTotal,
+      percentage: percentage,
+      grade: grade,
+      status: status,
+      ai_insights: aiInsights
+    };
+
+    try {
+      const { error } = await supabase.from('students').insert([dbRow]);
+      if (error) {
+        alert(`Supabase Error: ${error.message}. Make sure the table exists!`);
+        console.error(error);
+      } else {
+        // Refresh local list
+        await fetchStudents();
+        
+        // Push notification
+        const newNotif = {
+          id: Date.now().toString(),
+          text: `Added ${ocrPreviewData.name} to the database.`,
+          time: 'Just now',
+          read: false
+        };
+        setNotifications(prev => [newNotif, ...prev]);
+        
+        // Reset upload state
+        setUploadFile(null);
+        setUploadStep(0);
+        setUploadProgress(0);
+        setOcrLogs([]);
+        setActiveTab('rankings');
+      }
+    } catch (e: any) {
+      alert(`Database insertion failed: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteStudent = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to remove ${name} from the database?`)) {
+      setLoading(true);
+      try {
+        const { error } = await supabase
+          .from('students')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          alert(`Supabase Error: ${error.message}`);
+          console.error(error);
+        } else {
+          await fetchStudents();
+          // Push notification
+          const newNotif = {
+            id: Date.now().toString(),
+            text: `Removed ${name} from the database.`,
+            time: 'Just now',
+            read: false
+          };
+          setNotifications(prev => [newNotif, ...prev]);
+        }
+      } catch (e: any) {
+        alert(`Deletion failed: ${e.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   // --- Dynamic Dashboard Metrics ---
@@ -704,8 +886,100 @@ export default function Home() {
             {/* Workspace Body */}
             <main className="p-6 md:p-8 flex-1 space-y-8 max-w-7xl w-full mx-auto">
 
+              {/* Database Error alert block */}
+              {dbError && (
+                <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-left space-y-4">
+                  <div className="flex gap-3 items-center">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                    <h4 className="font-extrabold text-sm uppercase tracking-wider">Supabase Connection Error</h4>
+                  </div>
+                  <p className="text-xs dark:text-slate-400 text-slate-600 font-medium">
+                    Real-time Supabase database integration is active, but the backend returned an error: <code className="font-mono text-rose-500 bg-rose-500/10 px-1 py-0.5 rounded">{dbError}</code>. 
+                    If you haven't initialized the database schema yet, copy the SQL script below and execute it inside the **Supabase SQL Editor** to create the tables and allow public read/write access:
+                  </p>
+                  <pre className="p-4 bg-slate-950 text-slate-300 text-[10px] rounded-xl font-mono overflow-x-auto select-all max-h-48 border border-white/5 leading-relaxed">
+{`CREATE TABLE students (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  roll_number TEXT NOT NULL UNIQUE,
+  class_name TEXT NOT NULL,
+  scores JSONB NOT NULL,
+  total_obtained INTEGER NOT NULL,
+  max_total INTEGER DEFAULT 500,
+  percentage DOUBLE PRECISION NOT NULL,
+  grade TEXT NOT NULL,
+  status TEXT NOT NULL,
+  ai_insights JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public select" ON students FOR SELECT USING (true);
+CREATE POLICY "Allow public insert" ON students FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public delete" ON students FOR DELETE USING (true);
+CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
+                  </pre>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleResetData}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow"
+                    >
+                      Seed Demo Data
+                    </button>
+                    <button
+                      onClick={fetchStudents}
+                      className="px-4 py-2 border border-amber-500/20 hover:bg-amber-500/10 text-amber-400 rounded-lg text-xs font-bold transition-all"
+                    >
+                      Retry Connection
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Loader */}
+              {loading && (
+                <div className="space-y-6 py-12 text-center flex flex-col items-center justify-center">
+                  <div className="p-4 bg-indigo-500/10 rounded-full text-indigo-500 dark:text-indigo-400 animate-spin">
+                    <RefreshCw className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-slate-700 dark:text-slate-300 text-base">Fetching Supabase Records...</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Calculating dynamic rankings and aggregates</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Dynamic Empty State for Data-Driven Views */}
+              {!loading && ['dashboard', 'rankings', 'subject-analytics', 'reports', 'student-detail'].includes(activeTab) && studentsList.length === 0 && !dbError && (
+                <div className="max-w-md mx-auto py-16 text-center space-y-5 animate-fade-in">
+                  <div className="w-20 h-20 bg-indigo-500/10 dark:bg-indigo-500/5 border border-indigo-500/20 rounded-full flex items-center justify-center text-indigo-500 mx-auto">
+                    <GraduationCap className="w-10 h-10 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold dark:text-white text-slate-800">No Student Records Found</h3>
+                    <p className="text-xs dark:text-slate-400 text-slate-500 mt-1.5 leading-relaxed">
+                      Your Supabase database is connected but contains 0 students. Navigate to the Upload tab to import result documents or click below to seed your database with 12 initial mock student records.
+                    </p>
+                  </div>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => setActiveTab('upload')}
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                    >
+                      <Upload className="w-3.5 h-3.5" /> Parse Result Document
+                    </button>
+                    <button
+                      onClick={handleResetData}
+                      className="px-5 py-2.5 dark:bg-white/5 border border-slate-300 dark:border-white/10 dark:text-white text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 font-semibold text-xs rounded-xl transition-all"
+                    >
+                      Seed Database
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* --- VIEW: DASHBOARD OVERVIEW --- */}
-              {activeTab === 'dashboard' && (
+              {!loading && activeTab === 'dashboard' && studentsList.length > 0 && (
                 <div className="space-y-8 animate-fade-in">
                   
                   {/* Dashboard Hero Greeting */}
@@ -1043,7 +1317,7 @@ export default function Home() {
               )}
 
               {/* --- VIEW: UPLOAD RESULT --- */}
-              {activeTab === 'upload' && (
+              {!loading && activeTab === 'upload' && (
                 <div className="max-w-2xl mx-auto space-y-8 animate-fade-in text-center py-6">
                   
                   <div className="space-y-2">
@@ -1244,7 +1518,7 @@ export default function Home() {
               )}
 
               {/* --- VIEW: RANKINGS & STUDENTS --- */}
-              {activeTab === 'rankings' && (
+              {!loading && activeTab === 'rankings' && studentsList.length > 0 && (
                 <div className="space-y-6 animate-fade-in">
                   
                   {/* Rankings Header Controls */}
@@ -1388,26 +1662,12 @@ export default function Home() {
                                       <Eye className="w-4 h-4" />
                                     </button>
                                     <button
-                                      onClick={() => {
-                                        if (confirm(`Remove student ${s.name} from the database?`)) {
-                                          const filtered = studentsList.filter(item => item.id !== s.id);
-                                          const sorted = addStudentAndReRank(filtered.map(({ rank: _, ...rest }) => rest) as any, { scores: { mathematics: 0, physics: 0, chemistry: 0, english: 0, computerScience: 0 } } as any); // just dummy adding triggers rank refresh
-                                          
-                                          // Direct sorting trigger
-                                          const reRanked = filtered.map((item, index) => ({
-                                            ...item,
-                                            // reevaluate ranks directly by sorting percentages descending
-                                          })).sort((a,b) => b.percentage - a.percentage).map((item, index) => ({ ...item, rank: index + 1 }));
-
-                                          setStudentsList(reRanked);
-                                          localStorage.setItem('result_intel_students', JSON.stringify(reRanked));
-                                        }
-                                      }}
-                                      className="p-1.5 rounded-lg border border-red-500/15 hover:bg-red-500/10 text-red-500 transition-all"
-                                      title="Delete Record"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
+                                       onClick={() => handleDeleteStudent(s.id, s.name)}
+                                       className="p-1.5 rounded-lg border border-red-500/15 hover:bg-red-500/10 text-red-500 transition-all"
+                                       title="Delete Record"
+                                     >
+                                       <Trash2 className="w-4 h-4" />
+                                     </button>
                                   </div>
                                 </td>
                               </tr>
@@ -1422,7 +1682,7 @@ export default function Home() {
               )}
 
               {/* --- VIEW: STUDENT DETAIL --- */}
-              {activeTab === 'student-detail' && selectedStudent && (
+              {!loading && activeTab === 'student-detail' && selectedStudent && studentsList.length > 0 && (
                 <div className="space-y-8 animate-fade-in text-left">
                   
                   {/* Back button header */}
@@ -1638,7 +1898,7 @@ export default function Home() {
               )}
 
               {/* --- VIEW: SUBJECT ANALYTICS --- */}
-              {activeTab === 'subject-analytics' && (
+              {!loading && activeTab === 'subject-analytics' && studentsList.length > 0 && (
                 <div className="space-y-8 animate-fade-in text-left">
                   
                   {/* Selector Header */}
@@ -1758,7 +2018,7 @@ export default function Home() {
               )}
 
               {/* --- VIEW: REPORTS --- */}
-              {activeTab === 'reports' && (
+              {!loading && activeTab === 'reports' && studentsList.length > 0 && (
                 <div className="space-y-6 animate-fade-in text-left">
                   
                   <div>
@@ -1807,7 +2067,7 @@ export default function Home() {
               )}
 
               {/* --- VIEW: SETTINGS --- */}
-              {activeTab === 'settings' && (
+              {!loading && activeTab === 'settings' && (
                 <div className="space-y-6 animate-fade-in text-left max-w-2xl">
                   
                   <div>
