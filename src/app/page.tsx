@@ -510,12 +510,12 @@ export default function Home() {
       {activeTab === 'landing' && (
         <div className="flex flex-col min-h-screen">
           {/* Landing Header */}
-          <header className="w-full border-b border-indigo-500/10 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between glass-panel sticky top-0 z-50">
+          <header className="w-full border-b border-indigo-500/10 dark:border-white/5 py-4 flex items-center justify-between glass-panel sticky top-0 z-50 landing-header">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 rounded-xl shadow-lg shadow-indigo-500/20">
                 <Sparkles className="w-6 h-6 text-white pulse-node" />
               </div>
-              <span className="font-bold text-xl md:text-2xl bg-gradient-to-r from-indigo-900 via-indigo-700 to-cyan-600 dark:from-white dark:via-indigo-200 dark:to-cyan-400 bg-clip-text text-transparent tracking-tight">
+              <span className="font-bold bg-gradient-to-r from-indigo-900 via-indigo-700 to-cyan-600 dark:from-white dark:via-indigo-200 dark:to-cyan-400 bg-clip-text text-transparent tracking-tight landing-logo-text">
                 ResultIntel.ai
               </span>
             </div>
@@ -540,20 +540,20 @@ export default function Home() {
           </header>
 
           {/* Hero Section */}
-          <main className="flex-1 max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20 grid md:grid-cols-12 gap-12 items-center">
-            <div className="md:col-span-7 space-y-6 text-left">
+          <main className="flex-1 max-w-7xl mx-auto gap-12 items-center landing-hero">
+            <div className="space-y-6 text-left landing-hero-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold tracking-wide uppercase">
                 <Sparkles className="w-3.5 h-3.5" /> Next-Gen AI Academics Analytics
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] dark:text-white text-slate-900">
+              <h1 className="font-extrabold dark:text-white text-slate-900 landing-hero-title">
                 Transform Academic Results into{" "}
                 <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-500 dark:from-blue-400 dark:via-indigo-300 dark:to-cyan-300 bg-clip-text text-transparent">
                   Actionable Intelligence
                 </span>
               </h1>
 
-              <p className="text-base md:text-lg dark:text-slate-400 text-slate-600 leading-relaxed max-w-xl">
+              <p className="dark:text-slate-400 text-slate-600 leading-relaxed max-w-xl landing-hero-desc">
                 Upload result PDFs or images and instantly generate rankings, subject-wise toppers, performance insights, and visual analytics using our advanced AI-powered OCR.
               </p>
 
@@ -580,22 +580,22 @@ export default function Home() {
               {/* Floating micro stats */}
               <div className="grid grid-cols-3 gap-6 pt-8 border-t border-indigo-500/10 dark:border-white/5">
                 <div>
-                  <h4 className="text-2xl md:text-3xl font-bold dark:text-white text-slate-900">99.8%</h4>
+                  <h4 className="font-bold dark:text-white text-slate-900 micro-stat-number">99.8%</h4>
                   <p className="text-xs dark:text-slate-400 text-slate-500 font-medium mt-1">AI OCR Accuracy</p>
                 </div>
                 <div>
-                  <h4 className="text-2xl md:text-3xl font-bold dark:text-white text-slate-900">&lt; 3s</h4>
+                  <h4 className="font-bold dark:text-white text-slate-900 micro-stat-number">&lt; 3s</h4>
                   <p className="text-xs dark:text-slate-400 text-slate-500 font-medium mt-1">Extraction Speed</p>
                 </div>
                 <div>
-                  <h4 className="text-2xl md:text-3xl font-bold dark:text-white text-slate-900">12k+</h4>
+                  <h4 className="font-bold dark:text-white text-slate-900 micro-stat-number">12k+</h4>
                   <p className="text-xs dark:text-slate-400 text-slate-500 font-medium mt-1">Sheets Parsed</p>
                 </div>
               </div>
             </div>
 
             {/* Interactive Preview Mockup Card */}
-            <div className="md:col-span-5 relative w-full h-[380px] md:h-[450px]">
+            <div className="relative w-full landing-hero-right mockup-container">
               {/* Outer Glow */}
               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/30 to-cyan-500/20 blur-[60px] rounded-full z-0 pointer-events-none" />
 
@@ -681,9 +681,10 @@ export default function Home() {
           </main>
 
           {/* Features Section */}
-          <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full">
+          {/* Features Section */}
+          <section className="max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full features-section">
             <div className="text-center max-w-xl mx-auto space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight dark:text-white text-slate-900">
+              <h2 className="font-bold tracking-tight dark:text-white text-slate-900 features-title">
                 Core Engine Capabilities
               </h2>
               <p className="dark:text-slate-400 text-slate-600">
@@ -691,7 +692,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="features-grid">
               {[
                 {
                   title: 'OCR Extraction',
@@ -736,9 +737,9 @@ export default function Home() {
           </section>
 
           {/* How It Works Section */}
-          <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full text-center">
+          <section className="max-w-7xl mx-auto border-t border-indigo-500/10 dark:border-white/5 w-full text-center how-it-works-section">
             <div className="max-w-xl mx-auto space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight dark:text-white text-slate-900">
+              <h2 className="font-bold tracking-tight dark:text-white text-slate-900 how-it-works-title">
                 How It Works
               </h2>
               <p className="dark:text-slate-400 text-slate-600">
@@ -746,7 +747,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
+            <div className="relative timeline-grid">
               {[
                 { step: 'Step 1', title: 'Upload PDF/Image', desc: 'Drag your scan sheet, photo, or grading PDF onto our drop interface.' },
                 { step: 'Step 2', title: 'OCR Processing', desc: 'Our machine vision system identifies rows, tables, and numeric characters.' },
@@ -766,7 +767,7 @@ export default function Home() {
           </section>
 
           {/* Footer */}
-          <footer className="w-full border-t border-indigo-500/10 dark:border-white/5 py-8 text-center text-xs dark:text-slate-500 text-slate-500 glass-panel">
+          <footer className="w-full border-t border-indigo-500/10 dark:border-white/5 py-8 text-center text-xs dark:text-slate-500 text-slate-500 glass-panel landing-footer">
             <p>© 2026 ResultIntel.ai. Built with Next.js 16 & Tailwind CSS v4. All rights reserved.</p>
           </footer>
         </div>
@@ -872,7 +873,7 @@ export default function Home() {
           <div className="main-workspace">
             
             {/* Top Workspace Header */}
-            <header className="h-16 border-b border-indigo-500/10 dark:border-white/5 px-4 md:px-6 flex items-center justify-between glass-panel sticky top-0 z-30">
+            <header className="h-16 border-b border-indigo-500/10 dark:border-white/5 flex items-center justify-between glass-panel sticky top-0 z-30 workspace-header">
               
               {/* Breadcrumb / Title */}
               <div className="flex items-center gap-2">
@@ -898,7 +899,7 @@ export default function Home() {
                 {/* Reset Data Button */}
                 <button
                   onClick={handleResetData}
-                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 dark:bg-red-950/10 hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
+                  className="items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 dark:bg-red-950/10 hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all reset-db-btn"
                   title="Reset to original 12 student scores"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Reset Database
@@ -953,7 +954,7 @@ export default function Home() {
             </header>
 
             {/* Workspace Body */}
-            <main className="p-6 md:p-8 flex-1 space-y-8 max-w-7xl w-full mx-auto">
+            <main className="flex-1 space-y-8 max-w-7xl w-full mx-auto workspace-body">
 
               {/* Database Error alert block */}
               {dbError && (
@@ -1052,9 +1053,9 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                 <div className="space-y-8 animate-fade-in">
                   
                   {/* Dashboard Hero Greeting */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="justify-between dashboard-greeting-row">
                     <div>
-                      <h2 className="text-2xl md:text-3xl font-extrabold dark:text-white text-slate-900 tracking-tight">Academic Analytics Console</h2>
+                      <h2 className="font-extrabold dark:text-white text-slate-900 tracking-tight dashboard-greeting-title">Academic Analytics Console</h2>
                       <p className="text-sm dark:text-slate-400 text-slate-500 mt-1">AI-extracted database parsing models. Last updated 2 minutes ago.</p>
                     </div>
                     
@@ -1067,7 +1068,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   </div>
 
                   {/* Overview Cards */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 dashboard-metrics-grid gap-4 md:gap-6">
+                  <div className="dashboard-metrics-grid">
                     {[
                       { title: 'Total Students', value: stats.total, sub: 'Grade 12 Cohort', icon: <UserCheck className="w-5 h-5 text-indigo-400" /> },
                       { title: 'Average Score', value: `${stats.avgPct}%`, sub: `Class baseline`, icon: <TrendingUp className="w-5 h-5 text-cyan-400" /> },
@@ -1088,10 +1089,10 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   </div>
 
                   {/* Analytics Section - Custom SVG Charts */}
-                  <div className="grid lg:grid-cols-12 gap-6 md:gap-8">
+                  <div className="analytics-row-grid">
                     
                     {/* Student Performance Chart (Line Chart) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-8 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-wide">
                       <div className="flex justify-between items-center border-b border-indigo-500/5 pb-4 mb-4">
                         <div>
                           <h3 className="font-bold dark:text-white text-slate-800 text-base">Student Score Distribution</h3>
@@ -1182,7 +1183,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Grade Distribution Chart (Donut progress lists) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-4 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-narrow">
                       <div className="border-b border-indigo-500/5 pb-4 mb-4">
                         <h3 className="font-bold dark:text-white text-slate-800 text-base">Grade Distribution</h3>
                         <p className="text-xs dark:text-slate-500 text-slate-500 mt-0.5">Cohort distribution grouped by grades</p>
@@ -1220,7 +1221,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Subject Comparison Chart (Bar Chart) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-6 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-half">
                       <div className="border-b border-indigo-500/5 pb-4 mb-4">
                         <h3 className="font-bold dark:text-white text-slate-800 text-base">Subject Performance Benchmarks</h3>
                         <p className="text-xs dark:text-slate-500 text-slate-500 mt-0.5">Average scores vs subject toppers</p>
@@ -1286,7 +1287,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Performance Heatmap (Subject vs Students) */}
-                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 lg:col-span-6 flex flex-col justify-between">
+                    <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 flex flex-col justify-between analytics-card-half">
                       <div className="border-b border-indigo-500/5 pb-4 mb-4">
                         <h3 className="font-bold dark:text-white text-slate-800 text-base">Performance Heatmap</h3>
                         <p className="text-xs dark:text-slate-500 text-slate-500 mt-0.5">Cell grid mapping scores per subject (Ranks 1-6)</p>
@@ -1346,7 +1347,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                       <h3 className="font-extrabold text-lg dark:text-white text-slate-800 tracking-tight">AI intelligence Recommendations</h3>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="ai-recommendations-grid">
                       <div className="p-4 rounded-xl dark:bg-white/5 bg-slate-100 border border-indigo-500/5 space-y-2">
                         <div className="flex justify-between items-center text-xs font-bold text-red-500">
                           <span>Attention Flag</span>
@@ -1492,7 +1493,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                             <h4 className="font-bold text-sm uppercase tracking-wider">Review AI Parsed Entity</h4>
                           </div>
 
-                          <div className="grid md:grid-cols-3 gap-4">
+                          <div className="ocr-inputs-meta-grid">
                             <div>
                               <label className="text-[10px] font-bold text-slate-400 block mb-1">Student Name</label>
                               <input
@@ -1591,7 +1592,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                 <div className="space-y-6 animate-fade-in">
                   
                   {/* Rankings Header Controls */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="justify-between gap-4 rankings-header-row">
                     <div>
                       <h2 className="text-2xl font-extrabold dark:text-white text-slate-900 tracking-tight">Student Leaderboards</h2>
                       <p className="text-xs dark:text-slate-400 text-slate-500">Complete listing of students ranked by overall percentage performance.</p>
@@ -1770,10 +1771,10 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   </div>
 
                   {/* Profile Layout */}
-                  <div className="grid lg:grid-cols-12 gap-8">
+                  <div className="student-detail-grid">
                     
                     {/* Left profile detail card */}
-                    <div className="lg:col-span-4 space-y-6">
+                    <div className="space-y-6 student-sidebar-col">
                       
                       {/* Avatar Card */}
                       <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 text-center flex flex-col items-center">
@@ -1820,7 +1821,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     </div>
 
                     {/* Right subject details and SVG Radar chart */}
-                    <div className="lg:col-span-8 space-y-6">
+                    <div className="space-y-6 student-main-col">
                       
                       {/* Detailed Score Table */}
                       <div className="glass-card p-6 rounded-2xl border border-indigo-500/5 space-y-4">
@@ -1859,7 +1860,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                       </div>
 
                       {/* SVG Radar strengths polygon visualization */}
-                      <div className="grid md:grid-cols-2 gap-6">
+                      <div className="student-charts-row">
                         
                         {/* Radar Chart */}
                         <div className="glass-card p-5 rounded-2xl border border-indigo-500/5 flex flex-col items-center justify-between">
@@ -1971,7 +1972,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                 <div className="space-y-8 animate-fade-in text-left">
                   
                   {/* Selector Header */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-500/10 pb-4">
+                  <div className="border-b border-indigo-500/10 pb-4 subject-analytics-header-row">
                     <div>
                       <h2 className="text-2xl font-extrabold dark:text-white text-slate-900 tracking-tight">Subject Analytics Console</h2>
                       <p className="text-xs dark:text-slate-400 text-slate-500">Explore granular academic indicators on a subject-by-subject basis.</p>
@@ -2016,7 +2017,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                       <div className="space-y-6">
                         
                         {/* Statistics row */}
-                        <div className="grid md:grid-cols-4 gap-6">
+                        <div className="subject-stats-grid">
                           <div className="glass-card p-5 rounded-2xl border border-white/5">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Class Average</span>
                             <span className="text-3xl font-black text-indigo-500 mt-2 block">{data.avg}%</span>
@@ -2095,7 +2096,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                     <p className="text-xs dark:text-slate-400 text-slate-500 mt-1">Export, generate, or schedule compilation logs for cohorts and divisions.</p>
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-6">
+                  <div className="reports-grid">
                     {[
                       { title: 'Cumulative Rankings Log', format: 'PDF Document (A4)', desc: 'Consolidated listing of students sorted by final overall marks. Includes metadata signatures.', icon: <Trophy className="w-5 h-5 text-indigo-400" /> },
                       { title: 'Subject Performance Matrix', format: 'Excel spreadsheet', desc: 'Cell matrix of individual marks, subject-wise pass margins, standard deviations, and class scores.', icon: <FileText className="w-5 h-5 text-cyan-400" /> },
@@ -2147,7 +2148,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
                   <div className="glass-panel p-6 rounded-2xl border border-white/5 space-y-6">
                     <div className="space-y-4">
                       <h4 className="font-bold text-sm dark:text-white text-slate-800 border-b border-white/5 pb-2">AI OCR Engine</h4>
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="settings-row-2col">
                         <div>
                           <label className="text-[10px] font-bold text-slate-400 block mb-1">OCR Model Core</label>
                           <select className="w-full text-xs font-bold dark:bg-white/5 bg-white border border-slate-300 dark:border-white/10 p-2 rounded-lg dark:text-white text-slate-700">
@@ -2169,7 +2170,7 @@ CREATE POLICY "Allow public update" ON students FOR UPDATE USING (true);`}
 
                     <div className="space-y-4">
                       <h4 className="font-bold text-sm dark:text-white text-slate-800 border-b border-white/5 pb-2">Cohort Margins</h4>
-                      <div className="grid md:grid-cols-3 gap-4">
+                      <div className="settings-row-3col">
                         <div>
                           <label className="text-[10px] font-bold text-slate-400 block mb-1">Pass Score Threshold</label>
                           <input type="number" defaultValue="40" className="w-full text-xs font-bold dark:bg-white/5 bg-white border border-slate-300 dark:border-white/10 p-2 rounded-lg dark:text-white text-slate-700 text-center" />
